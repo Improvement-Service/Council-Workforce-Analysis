@@ -1,14 +1,22 @@
+---
+title: "test report"
+output: html_document
+date: "2023-05-05"
+---
+
+```{r setup, echo = FALSE, warning = FALSE, message = FALSE}
+library(knitr)
+library(scales)
 library(plyr)
 library(tidyverse)
 library(readxl)
 library(openxlsx)
+```
 
-# Read in all council data --------------------------------------------------
-
+```{r read in council data, echo = FALSE}
 # Directory path 
 # (Folder: Research - Formatted Data, has been synced to personal drive)
 folder_path <- "C:/Users/connachan.cara/IS/Research - Formatted Data/"
-
 
 # Function to read clean data sheet of each council file and combine into 1 df
 read_files <- function(directory_path, file) {
@@ -33,10 +41,10 @@ read_files <- function(directory_path, file) {
 # List all the council files in the folder
 master_data <- list.files(folder_path) %>% 
   # Run the read_files function, looping through each council file and store in a data frame
-  map_df(~read_files(folder_path, .))
+    map_df(~read_files(folder_path, .))
+```
 
-# Aggregate Scotland level data -------------------------------------------------
-
+``` {r aggregate Scotland data, echo = FALSE}
 # Add councils values together for each measure
 scotland_data <- master_data %>%
   group_by(Characteristic, Measure) %>%
@@ -51,6 +59,5 @@ scotland_data <- master_data %>%
 # Add column with percentages within each characteristic
 scotland_data <- scotland_data %>%
   group_by(Characteristic) %>%
-  mutate(Percent = Value/sum(Value))
-
-  
+  mutate(Percent = round((Value/sum(Value)) * 100), 1)
+```
