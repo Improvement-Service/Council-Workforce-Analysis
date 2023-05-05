@@ -34,3 +34,23 @@ read_files <- function(directory_path, file) {
 master_data <- list.files(folder_path) %>% 
   # Run the read_files function, looping through each council file and store in a data frame
   map_df(~read_files(folder_path, .))
+
+# Aggregate Scotland level data -------------------------------------------------
+
+# Add councils values together for each measure
+scotland_data <- master_data %>%
+  group_by(Characteristic, Measure) %>%
+  summarise(Value = sum(Value, na.rm = TRUE)) %>%
+  ungroup() %>%
+  # Filter to exclude unique categories, these are categories used by one or more councils 
+  # therefore are not comparable at a Scotland level
+  filter(!Characteristic %in% c("Unique Age Categories", 
+                             "Unique Sexual Orientation Categories",
+                             "SSCQ Ethnicity Categories"))
+
+# Add column with percentages within each characteristic
+scotland_data <- scotland_data %>%
+  group_by(Characteristic) %>%
+  mutate(Percent = Value/sum(Value))
+
+  
