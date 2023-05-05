@@ -61,3 +61,61 @@ scotland_data <- scotland_data %>%
   group_by(Characteristic) %>%
   mutate(Percent = round((Value/sum(Value)) * 100), 1)
 ```
+
+``` {r function to create graphs, echo = FALSE}
+create_graphs <- function(graph_characteristic) {
+  filtered_data <- scotland_data %>% filter(Characteristic == graph_characteristic)
+  ggplot(filtered_data, aes(x = Measure, y = Percent)) +
+  geom_bar(position = "dodge", stat = "identity", color = "grey") +
+  # Data Labels
+  geom_text(aes(label = paste0(Percent, "%")), 
+            vjust = -0.5, 
+            color = "black", 
+            position = position_dodge(0.9), 
+            size = 3
+  ) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 12)) +
+  theme_minimal() +
+  # Remove axis labels
+  theme(axis.title.x = element_blank(), 
+        axis.title.y = element_blank()
+)
+}
+
+```
+
+```{r Sex, echo = FALSE, warning = FALSE}
+sex_graph <- create_graphs(graph_characteristic = "Sex")
+sex_graph
+```
+
+```{r Age, echo = FALSE, warning = FALSE}
+age_graph <- create_graphs(graph_characteristic = "SSCQ Age Categories")
+age_graph
+```
+
+```{r Disability, echo = FALSE, warning = FALSE}
+disability_graph <- create_graphs(graph_characteristic = "Disability")
+disability_graph
+```
+
+
+```{r Ethnicity, echo = FALSE, warning = FALSE}
+ethnicity_graph <- create_graphs(graph_characteristic = "Comparable Ethnicity Categories")
+ethnicity_graph
+```
+
+```{r Religion, echo = FALSE, warning = FALSE}
+religion_graph <- create_graphs(graph_characteristic = "SSCQ Religion Categories")
+religion_graph
+```
+
+```{r Sexual Orientation, echo = FALSE, warning = FALSE}
+sexual_orientation_graph <- create_graphs(graph_characteristic = "SSCQ Sexual Orientation Categories")
+sexual_orientation_graph
+```
+
+```{r Marital Status, echo = FALSE, warning = FALSE}
+marital_status_graph <- create_graphs(graph_characteristic = "SSCQ Marital Status")
+marital_status_graph
+```
