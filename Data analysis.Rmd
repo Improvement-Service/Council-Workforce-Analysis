@@ -39,14 +39,37 @@ read_files <- function(directory_path, file) {
 }
 
 # List all the council files in the folder
-master_data <- list.files(folder_path) %>% 
+council_data <- list.files(folder_path) %>% 
+  # Don't read in SHS data
+  .[!. == "SHS 2021.xlsx"] %>%
   # Run the read_files function, looping through each council file and store in a data frame
     map_df(~read_files(folder_path, .))
 ```
 
-``` {r aggregate Scotland data, echo = FALSE}
+```{r read in SHS data, echo = FALSE}
+shs_data <- read_excel(
+  "C:/Users/connachan.cara/IS/Research - Formatted Data/SHS 2021.xlsx",
+  sheet = "Clean Data",
+  col_types = c("text", 
+                "text", 
+                "text",
+                "text",
+                "text",
+                "numeric"
+                )
+                       )
+# Add column with percentages within each characteristic
+shs_data <- shs_data %>%
+  group_by(Characteristic) %>%
+  mutate(Percent = round((Value/sum(Value)) * 100, 1)) %>%
+  # Add column with dataset label
+  mutate(Dataset = "Scotland - Adult Population (SHS)") %>%
+  select(-Council, -`Period Covered`, -Date)
+```
+
+``` {r aggregate Scotland data, echo = FALSE, warning = FALSE}
 # Add councils values together for each measure
-scotland_data <- master_data %>%
+scotland_data <- council_data %>%
   group_by(Characteristic, Measure) %>%
   summarise(Value = sum(Value, na.rm = TRUE)) %>%
   ungroup() %>%
@@ -59,13 +82,20 @@ scotland_data <- master_data %>%
 # Add column with percentages within each characteristic
 scotland_data <- scotland_data %>%
   group_by(Characteristic) %>%
-  mutate(Percent = round((Value/sum(Value)) * 100), 1)
+  mutate(Percent = round((Value/sum(Value)) * 100, 1)) %>%
+  # Add column with dataset label
+  mutate(Dataset = "Scotland - Council Employees")
+```
+
+```{r comparative dataset, echo = FALSE}
+# Combine Scotland level employee data with SHS data
+comparative_data <- rbind(scotland_data, shs_data)
 ```
 
 ``` {r function to create graphs, echo = FALSE}
 create_graphs <- function(graph_characteristic) {
-  filtered_data <- scotland_data %>% filter(Characteristic == graph_characteristic)
-  ggplot(filtered_data, aes(x = Measure, y = Percent)) +
+  filtered_data <- comparative_data %>% filter(Characteristic == graph_characteristic)
+  ggplot(filtered_data, aes(x = Measure, y = Percent, fill = Dataset)) +
   geom_bar(position = "dodge", stat = "identity", color = "grey") +
   # Data Labels
   geom_text(aes(label = paste0(Percent, "%")), 
