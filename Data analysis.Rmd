@@ -11,6 +11,7 @@ library(plyr)
 library(tidyverse)
 library(readxl)
 library(openxlsx)
+library(ggpubr)
 ```
 
 ```{r read in council data, echo = FALSE}
@@ -44,6 +45,8 @@ council_data <- list.files(folder_path) %>%
   .[!. == "SHS 2021.xlsx"] %>%
   # Don't read in SSCQ data
   .[!. == "SSCQ 2019.xlsx"] %>%
+  # Don't read in Gender pay gap data
+  .[!. == "Gender Pay Gap.xlsx"] %>%
   # Run the read_files function, looping through each council file and store in a data frame
     map_df(~read_files(folder_path, .))
 ```
@@ -88,10 +91,15 @@ sscq_data <- read_excel(
 sscq_data$Council[sscq_data$Council == "Edinburgh, City of"] <- "City of Edinburgh"
 ```
 
+```{r read in pay gap data, echo = FALSE}
+pay_gap_data <- read_excel("C:/Users/connachan.cara/IS/Research - Formatted Data/Gender Pay Gap.xlsx")
+```
+
 ``` {r create council percentages, echo = FALSE}
 council_data <- council_data %>%
   group_by(Council, Characteristic) %>%
-  mutate(Percent = round((Value/sum(Value, na.rm = TRUE)) * 100, 1))
+  mutate(Percent = round((Value/sum(Value, na.rm = TRUE)) * 100, 1)) %>%
+  ungroup()
 ```
 
 ``` {r aggregate Scotland data, echo = FALSE, warning = FALSE}
@@ -191,7 +199,7 @@ workforce_pop_data <- merge(council_data_formatted, sscq_data_formatted)
 
 ```
 
-```{r gender bar graphs, echo = FALSE, warning = FALSE}
+```{r gender diff, echo = FALSE, warning = FALSE}
 gender_diff_data <- workforce_pop_data %>%
   filter(Characteristic == "Sex" & Measure == "Female") %>%
   mutate(Diff = `Council Workforce` - `Council Population`)
@@ -222,6 +230,35 @@ gender_range_summary <- rbind(pop_min, pop_max) %>%
   rbind(diff_max)
 
 kable(gender_range_summary)
+```
+
+```{r gender pay gap, echo = FALSE}
+gender_data <- council_data %>%
+  filter(Characteristic == "Sex" & Measure == "Female") %>%
+  pivot_wider(., names_from = Measure, values_from = Percent) %>%
+  select(Council, Female)
+
+pay_gap_data <- pay_gap_data %>%
+  pivot_wider(., names_from = Measure, values_from = Data) %>%
+  select(-Year)
+  
+pay_gap_data <- merge(pay_gap_data, gender_data)
+
+print(ggplot(pay_gap_data, aes(x = Female, y = `Gender Pay Gap`)) +
+        geom_point() +
+        # Add correlation line
+        geom_smooth(data = pay_gap_data, 
+                    aes(x = Female, y = `Gender Pay Gap`),
+                    method = "lm", 
+                    se = FALSE, 
+                    colour= "black"
+                    ) +
+        # Adds correlation label
+        stat_cor(data = pay_gap_data, 
+                 aes(x = Female, y = `Gender Pay Gap`), 
+                 method = "pearson"
+                 ) 
+      )
 ```
 
 ```{r age diff, echo = FALSE}
