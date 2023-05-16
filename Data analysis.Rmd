@@ -333,3 +333,26 @@ age_diff_summary <- rbind(max_younger_slice, max_diff_younger_slice) %>%
 
 kable(age_diff_summary)
 ```
+
+```{r max minorities, echo = FALSE}
+ethnicity_max <- workforce_pop_data %>%
+  filter(Characteristic == "Comparable Ethnicity Categories" & 
+           Measure == "Minority Ethnicities") %>%
+  filter(`Council Workforce` == max(`Council Workforce`, na.rm = TRUE))
+
+disability_max <- workforce_pop_data %>%
+  filter(Characteristic == "Disability" &
+           Measure == "Yes") %>%
+  filter(`Council Workforce` == max(`Council Workforce`, na.rm = TRUE))
+
+sexuality_max <- workforce_pop_data %>%
+  filter(Characteristic == "SSCQ Sexual Orientation Categories" &
+           Measure == "LGB") %>%
+  filter(`Council Workforce` == max(`Council Workforce`, na.rm = TRUE))
+
+max_minorities <- rbind(ethnicity_max, disability_max) %>%
+  rbind(sexuality_max)
+
+kable(max_minorities)
+
+```
