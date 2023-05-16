@@ -42,11 +42,14 @@ read_files <- function(directory_path, file) {
 council_data <- list.files(folder_path) %>% 
   # Don't read in SHS data
   .[!. == "SHS 2021.xlsx"] %>%
+  # Don't read in SSCQ data
+  .[!. == "SSCQ 2019.xlsx"] %>%
   # Run the read_files function, looping through each council file and store in a data frame
     map_df(~read_files(folder_path, .))
 ```
 
 ```{r read in SHS data, echo = FALSE}
+# Scotland level population comparator
 shs_data <- read_excel(
   "C:/Users/connachan.cara/IS/Research - Formatted Data/SHS 2021.xlsx",
   sheet = "Clean Data",
@@ -65,6 +68,30 @@ shs_data <- shs_data %>%
   # Add column with dataset label
   mutate(Dataset = "Scotland - Adult Population (SHS)") %>%
   select(-Council, -`Period Covered`, -Date)
+```
+
+``` {r read in SSCQ data, echo = FALSE, warning = FALSE}
+# Council level population comparator
+sscq_data <- read_excel(
+  "C:/Users/connachan.cara/IS/Research - Formatted Data/SSCQ 2019.xlsx",
+  sheet = "Clean Data",
+  col_types = c("text",
+                "text",
+                "text", 
+                "text",
+                "text",
+                "text",
+                "numeric"
+                )
+                       )
+
+sscq_data$Council[sscq_data$Council == "Edinburgh, City of"] <- "City of Edinburgh"
+```
+
+``` {r create council percentages, echo = FALSE}
+council_data <- council_data %>%
+  group_by(Council, Characteristic) %>%
+  mutate(Percent = round((Value/sum(Value, na.rm = TRUE)) * 100, 1))
 ```
 
 ``` {r aggregate Scotland data, echo = FALSE, warning = FALSE}
@@ -92,9 +119,10 @@ scotland_data <- scotland_data %>%
 comparative_data <- rbind(scotland_data, shs_data)
 ```
 
-``` {r function to create graphs, echo = FALSE}
-create_graphs <- function(graph_characteristic) {
-  filtered_data <- comparative_data %>% filter(Characteristic == graph_characteristic)
+``` {r function to create Scotland graphs, echo = FALSE}
+create_scotland_graphs <- function(graph_characteristic) {
+  filtered_data <- comparative_data %>% 
+    filter(Characteristic == graph_characteristic)
   ggplot(filtered_data, aes(x = Measure, y = Percent, fill = Dataset)) +
   geom_bar(position = "dodge", stat = "identity", color = "grey") +
   # Data Labels
@@ -114,38 +142,157 @@ create_graphs <- function(graph_characteristic) {
 
 ```
 
-```{r Sex, echo = FALSE, warning = FALSE}
-sex_graph <- create_graphs(graph_characteristic = "Sex")
-sex_graph
+```{r Sex Scotland, echo = FALSE, warning = FALSE}
+sex_scotland_graph <- create_scotland_graphs(graph_characteristic = "Sex")
+sex_scotland_graph
 ```
 
-```{r Age, echo = FALSE, warning = FALSE}
-age_graph <- create_graphs(graph_characteristic = "SSCQ Age Categories")
-age_graph
+```{r Age Scotland, echo = FALSE, warning = FALSE}
+age_scotland_graph <- create_scotland_graphs(graph_characteristic = "SSCQ Age Categories")
+age_scotland_graph
 ```
 
-```{r Disability, echo = FALSE, warning = FALSE}
-disability_graph <- create_graphs(graph_characteristic = "Disability")
-disability_graph
+```{r Disability Scotland, echo = FALSE, warning = FALSE}
+disability_scotland_graph <- create_scotland_graphs(graph_characteristic = "Disability")
+disability_scotland_graph
 ```
 
 
-```{r Ethnicity, echo = FALSE, warning = FALSE}
-ethnicity_graph <- create_graphs(graph_characteristic = "Comparable Ethnicity Categories")
-ethnicity_graph
+```{r Ethnicity Scotland, echo = FALSE, warning = FALSE}
+ethnicity_scotland_graph <- create_scotland_graphs(graph_characteristic = "Comparable Ethnicity Categories")
+ethnicity_scotland_graph
 ```
 
-```{r Religion, echo = FALSE, warning = FALSE}
-religion_graph <- create_graphs(graph_characteristic = "SSCQ Religion Categories")
-religion_graph
+```{r Religion Scotland, echo = FALSE, warning = FALSE}
+religion_scotland_graph <- create_scotland_graphs(graph_characteristic = "SSCQ Religion Categories")
+religion_scotland_graph
 ```
 
-```{r Sexual Orientation, echo = FALSE, warning = FALSE}
-sexual_orientation_graph <- create_graphs(graph_characteristic = "SSCQ Sexual Orientation Categories")
-sexual_orientation_graph
+```{r Sexual Orientation Scotland, echo = FALSE, warning = FALSE}
+sexual_orientation_scotland_graph <- create_scotland_graphs(graph_characteristic = "SSCQ Sexual Orientation Categories")
+sexual_orientation_scotland_graph
 ```
 
-```{r Marital Status, echo = FALSE, warning = FALSE}
-marital_status_graph <- create_graphs(graph_characteristic = "SSCQ Marital Status")
-marital_status_graph
+```{r Marital Status Scotland, echo = FALSE, warning = FALSE}
+marital_status_scotland_graph <- create_scotland_graphs(graph_characteristic = "SSCQ Marital Status")
+marital_status_scotland_graph
+```
+
+``` {r workforce and population data, echo = FALSE}
+council_data_formatted <- council_data %>%
+  select(-`Period Covered`, -Date, -Value) %>%
+  rename(`Council Workforce` = Percent)
+
+sscq_data_formatted <- sscq_data %>%
+  select(-Dataset, -`Period Covered`, -Date) %>%
+  rename(`Council Population` = Percentage)
+
+workforce_pop_data <- merge(council_data_formatted, sscq_data_formatted)
+
+```
+
+```{r gender bar graphs, echo = FALSE, warning = FALSE}
+gender_diff_data <- workforce_pop_data %>%
+  filter(Characteristic == "Sex" & Measure == "Female") %>%
+  mutate(Diff = `Council Workforce` - `Council Population`)
+
+pop_min <- gender_diff_data %>%
+  filter(`Council Population` == min(`Council Population`)) %>%
+  mutate(Criteria = "Population min")
+
+pop_max <- gender_diff_data %>%
+  filter(`Council Population` == max(`Council Population`)) %>%
+  mutate(Criteria = "Population max")   
+
+workforce_min <- gender_diff_data %>%
+  filter(`Council Workforce` == min(`Council Workforce`)) %>%
+  mutate(Criteria = "Workforce min")
+
+workforce_max <- gender_diff_data %>%
+  filter(`Council Workforce` == max(`Council Workforce`)) %>%
+  mutate(Criteria = "Workforce max")
+
+diff_max <- gender_diff_data %>%
+  filter(Diff == max(Diff)) %>%
+  mutate(Criteria = "Difference max")
+
+gender_range_summary <- rbind(pop_min, pop_max) %>%
+  rbind(workforce_min) %>%
+  rbind(workforce_max) %>%
+  rbind(diff_max)
+
+kable(gender_range_summary)
+```
+
+```{r age diff, echo = FALSE}
+# Group together 3 youngest age groups and 3 oldest
+# exclude 75+ as there is such a small prop in that group
+age_diff_data <- workforce_pop_data %>%
+  filter(Characteristic == "SSCQ Age Categories" & !Measure %in% c(
+    "75+", "Age - Other (e.g. Prefer not to answer / not disclosed)")) %>%
+  mutate(`Age Category` = "Younger")
+
+age_diff_data$`Age Category`[age_diff_data$Measure == "45-54"] <- "Older"
+age_diff_data$`Age Category`[age_diff_data$Measure == "55-64"] <- "Older"
+age_diff_data$`Age Category`[age_diff_data$Measure == "65-74"] <- "Older"
+
+# Sum the groups to get aggregate younger and older %
+age_diff_data <- age_diff_data %>%
+  group_by(Council, `Age Category`) %>%
+  mutate(`Workforce Sum` = sum(`Council Workforce`, na.rm = TRUE)) %>%
+  mutate(`Population Sum` = sum(`Council Population`, na.rm = TRUE)) %>%
+  mutate(Diff = `Workforce Sum` - `Population Sum`)
+  
+younger_slice <- age_diff_data %>%
+  ungroup() %>%
+  filter(`Age Category` == "Younger") %>%
+  # Remove these councils as they have missing age categories
+  filter(!Council %in% c("Moray", 
+                         "North Lanarkshire", 
+                         "Scottish Borders"
+                         )
+         )
+
+max_younger_slice <- younger_slice %>%
+  filter(`Workforce Sum` == max(`Workforce Sum`)) %>%
+  slice(1) %>%
+  mutate(Criteria = "max_younger_slice")
+
+max_diff_younger_slice <- younger_slice %>%
+  filter(Diff == max(Diff)) %>%
+  slice(1) %>%
+  mutate(Criteria = "max_diff_younger_slice")
+
+older_slice <- age_diff_data %>%
+  ungroup() %>%
+  filter(`Age Category` == "Older") %>%
+  # Remove these councils as they have missing age categories
+  filter(!Council %in% c("Moray", 
+                         "North Lanarkshire", 
+                         "Scottish Borders"
+                         )
+         )
+
+max_older_slice <- older_slice %>%
+  filter(`Workforce Sum` == max(`Workforce Sum`)) %>%
+  slice(1) %>%
+  mutate(Criteria = "max_older_slice")
+
+max_diff_older_slice <- older_slice %>%
+  filter(Diff == max(Diff)) %>%
+  slice(1) %>%
+  mutate(Criteria = "max_diff_older_slice")
+
+age_diff_summary <- rbind(max_younger_slice, max_diff_younger_slice) %>%
+  rbind(max_older_slice) %>%
+  rbind(max_diff_older_slice) %>%
+  select(Criteria, 
+         Council, 
+         `Age Category`, 
+         `Workforce Sum`, 
+         `Population Sum`, 
+         Diff
+         )
+
+kable(age_diff_summary)
 ```
