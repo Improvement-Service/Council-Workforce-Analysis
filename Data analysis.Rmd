@@ -119,27 +119,63 @@ scotland_data <- scotland_data %>%
   group_by(Characteristic) %>%
   mutate(Percent = round((Value/sum(Value)) * 100, 1)) %>%
   # Add column with dataset label
-  mutate(Dataset = "Scotland - Council Employees")
+  mutate(Dataset = "Scotland - Council Employees") %>%
+  select(-Value)
 ```
 
-```{r comparative dataset, echo = FALSE}
-# Combine Scotland level employee data with SHS data
-comparative_data <- rbind(scotland_data, shs_data)
+```{r comparative dataset, echo = FALSE, warning = FALSE}
+# Format sscq data
+scotland_sscq <- sscq_data %>%
+  filter(Council == "Scotland") %>%
+  rename(Percent = Percentage) %>%
+  select(Characteristic, Measure, Percent, Dataset)
+# Combine Scotland level employee data with SSCQ data
+comparative_data <- rbind(scotland_data, scotland_sscq)
+# Set as factor to keep order of the bars
+comparative_data$Dataset <- factor(comparative_data$Dataset, 
+                                   levels = c(
+                                     "Scotland - Council Employees",
+                                     "Scotland - Adult Population (SSCQ)"
+                                     )
+                                   )
+
+# Rename variables so they look nicer/more informative in graphs
+comparative_data$Measure[comparative_data$Measure == "Yes"] <- "Disability"
+comparative_data$Measure[comparative_data$Measure == "No"] <- "No Disability"
+comparative_data$Measure[comparative_data$Measure == "LGB"] <- "Lesbian, Gay or Bisexual"
+comparative_data$Measure[comparative_data$Measure == "Married/Civil partnership"] <- "Married / Civil partnership"
+comparative_data$Measure[comparative_data$Measure == "Never married - single/DK"] <- "Single"
+comparative_data$Measure[comparative_data$Measure == "Divorced/Dissolved civil partnership"] <- "Divorced / Dissolved civil partnership"
+comparative_data$Measure[comparative_data$Measure == "Widowed/Bereaved civil partner"] <- "Widowed / Bereaved civil partner"
+
+# Rename Characterstics so they can be used as titles
+comparative_data$Characteristic[comparative_data$Characteristic == "Comparable Ethnicity Categories"] <- "Ethnicity"
+comparative_data$Characteristic[comparative_data$Characteristic == "SSCQ Age Categories"] <- "Age"
+comparative_data$Characteristic[comparative_data$Characteristic == "SSCQ Marital Status"] <- "Marital Status"
+comparative_data$Characteristic[comparative_data$Characteristic == "SSCQ Religion Categories"] <- "Religion"
+comparative_data$Characteristic[comparative_data$Characteristic == "SSCQ Sexual Orientation Categories"] <- "Sexual Orientation"
+
 ```
 
 ``` {r function to create Scotland graphs, echo = FALSE}
-create_scotland_graphs <- function(graph_characteristic) {
+create_scotland_graphs <- function(graph_characteristic, factor_levels) {
   filtered_data <- comparative_data %>% 
     filter(Characteristic == graph_characteristic)
-  ggplot(filtered_data, aes(x = Measure, y = Percent, fill = Dataset)) +
+  ggplot(filtered_data, aes(x = factor(Measure, factor_levels), 
+                            y = Percent, fill = Dataset
+                            )
+         ) +
   geom_bar(position = "dodge", stat = "identity", color = "grey") +
+  scale_fill_brewer(palette = "Paired", direction = -1) +
   # Data Labels
   geom_text(aes(label = paste0(Percent, "%")), 
             vjust = -0.5, 
             color = "black", 
             position = position_dodge(0.9), 
-            size = 3
-  ) +
+            size = 2.5
+            ) +
+    ggtitle(graph_characteristic) +
+  # Wrap long labels
   scale_x_discrete(labels = function(x) str_wrap(x, width = 12)) +
   theme_minimal() +
   # Remove axis labels
@@ -151,38 +187,99 @@ create_scotland_graphs <- function(graph_characteristic) {
 ```
 
 ```{r Sex Scotland, echo = FALSE, warning = FALSE}
-sex_scotland_graph <- create_scotland_graphs(graph_characteristic = "Sex")
+sex_scotland_graph <- create_scotland_graphs(
+  graph_characteristic = "Sex",
+  factor_levels = c(
+    "Female",
+    "Male", 
+    "Sex - Other (e.g. Prefer not to answer / not disclosed)"
+    )
+  )
 sex_scotland_graph
 ```
 
 ```{r Age Scotland, echo = FALSE, warning = FALSE}
-age_scotland_graph <- create_scotland_graphs(graph_characteristic = "SSCQ Age Categories")
+age_scotland_graph <- create_scotland_graphs(
+  graph_characteristic = "Age", 
+  factor_levels = c(
+    "16-24", 
+    "25-34",
+    "35-44",
+    "45-54",
+    "55-64",
+    "65-74",
+    "75+",
+    "Age - Other (e.g. Prefer not to answer / not disclosed)"
+    )
+  )
 age_scotland_graph
 ```
 
 ```{r Disability Scotland, echo = FALSE, warning = FALSE}
-disability_scotland_graph <- create_scotland_graphs(graph_characteristic = "Disability")
+disability_scotland_graph <- create_scotland_graphs(
+  graph_characteristic = "Disability", 
+  factor_levels = c(
+    "Disability", 
+    "No Disability", 
+    "Disability - Other (e.g. Prefer not to answer / not disclosed)"
+    )
+  )
 disability_scotland_graph
 ```
 
 
 ```{r Ethnicity Scotland, echo = FALSE, warning = FALSE}
-ethnicity_scotland_graph <- create_scotland_graphs(graph_characteristic = "Comparable Ethnicity Categories")
+ethnicity_scotland_graph <- create_scotland_graphs(
+  graph_characteristic = "Ethnicity", 
+  factor_levels = c(
+    "White", 
+    "Minority Ethnicities", 
+    "Ethnicity - Other (e.g. Prefer not to answer / not disclosed)"
+    )
+  )
 ethnicity_scotland_graph
 ```
 
 ```{r Religion Scotland, echo = FALSE, warning = FALSE}
-religion_scotland_graph <- create_scotland_graphs(graph_characteristic = "SSCQ Religion Categories")
+religion_scotland_graph <- create_scotland_graphs(
+  graph_characteristic = "Religion", 
+  factor_levels = c(
+    "None", 
+    "Church of Scotland",  
+    "Roman Catholic",
+    "Other Christian", 
+    "Muslim", 
+    "Religion - Other (e.g. Prefer not to answer / not disclosed)"
+    )
+  )
 religion_scotland_graph
 ```
 
 ```{r Sexual Orientation Scotland, echo = FALSE, warning = FALSE}
-sexual_orientation_scotland_graph <- create_scotland_graphs(graph_characteristic = "SSCQ Sexual Orientation Categories")
+sexual_orientation_scotland_graph <- create_scotland_graphs(
+  graph_characteristic = "Sexual Orientation",
+  factor_levels = c(
+    "Heterosexual", 
+    "Lesbian, Gay or Bisexual", 
+    "Sexual Orientation - Other (e.g. prefer not to answer / not disclosed)"
+    )
+  )
+
 sexual_orientation_scotland_graph
 ```
 
 ```{r Marital Status Scotland, echo = FALSE, warning = FALSE}
-marital_status_scotland_graph <- create_scotland_graphs(graph_characteristic = "SSCQ Marital Status")
+marital_status_scotland_graph <- create_scotland_graphs(
+  graph_characteristic = "Marital Status", 
+  factor_levels = c(
+    "Married / Civil partnership", 
+    "Single", 
+    "Divorced / Dissolved civil partnership", 
+    "Seperated", 
+    "Widowed / Bereaved civil partner", 
+    "Marital Status - Other (e.g. prefer not to answer / not disclosed)"
+    )
+  )
 marital_status_scotland_graph
 ```
 
@@ -338,17 +435,26 @@ kable(age_diff_summary)
 ethnicity_max <- workforce_pop_data %>%
   filter(Characteristic == "Comparable Ethnicity Categories" & 
            Measure == "Minority Ethnicities") %>%
-  filter(`Council Workforce` == max(`Council Workforce`, na.rm = TRUE))
+  filter(`Council Workforce` == max(`Council Workforce`, 
+                                    na.rm = TRUE)
+         ) %>%
+  mutate(Criteria = "ethnicity_max")
 
 disability_max <- workforce_pop_data %>%
   filter(Characteristic == "Disability" &
            Measure == "Yes") %>%
-  filter(`Council Workforce` == max(`Council Workforce`, na.rm = TRUE))
+  filter(`Council Workforce` == max(`Council Workforce`, 
+                                    na.rm = TRUE)
+         ) %>%
+  mutate(Criteria = "disability_max")
 
 sexuality_max <- workforce_pop_data %>%
   filter(Characteristic == "SSCQ Sexual Orientation Categories" &
            Measure == "LGB") %>%
-  filter(`Council Workforce` == max(`Council Workforce`, na.rm = TRUE))
+  filter(`Council Workforce` == max(`Council Workforce`, 
+                                    na.rm = TRUE)
+         ) %>%
+  mutate(Criteria = "sexuality_max")
 
 max_minorities <- rbind(ethnicity_max, disability_max) %>%
   rbind(sexuality_max)
