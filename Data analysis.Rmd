@@ -180,7 +180,9 @@ create_scotland_graphs <- function(graph_characteristic, factor_levels) {
   theme_minimal() +
   # Remove axis labels
   theme(axis.title.x = element_blank(), 
-        axis.title.y = element_blank()
+        axis.title.y = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_blank()
 )
 }
 
