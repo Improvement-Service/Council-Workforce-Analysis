@@ -96,15 +96,58 @@ pay_gap_data <- read_excel("C:/Users/connachan.cara/IS/Research - Formatted Data
 ```
 
 ``` {r create council percentages, echo = FALSE}
-council_data <- council_data %>%
+council_data_no_other <- council_data %>%
+  filter(!Measure %in% c(
+    "Sex - Other (e.g. Prefer not to answer / not disclosed)", 
+    "Age - Other (e.g. Prefer not to answer / not disclosed)", 
+    "Disability - Other (e.g. Prefer not to answer / not disclosed)",
+    "Ethnicity - Other (e.g. Prefer not to answer / not disclosed)",
+    "Religion - Other (e.g. Prefer not to answer / not disclosed)", 
+    "Sexual Orientation - Other (e.g. prefer not to answer / not disclosed)", 
+    "Marital Status - Other (e.g. prefer not to answer / not disclosed)"
+  )
+  ) %>%
   group_by(Council, Characteristic) %>%
   mutate(Percent = round((Value/sum(Value, na.rm = TRUE)) * 100, 1)) %>%
   ungroup()
 ```
 
+```{r create scotland data with other, echo = FALSE}
+scotland_data_with_other <- council_data %>%
+  group_by(Characteristic, Measure) %>%
+  summarise(Value = sum(Value, na.rm = TRUE)) %>%
+  ungroup() %>%
+  # Filter to exclude unique categories, these are categories used by one or more councils 
+  # therefore are not comparable at a Scotland level
+  filter(!Characteristic %in% c("Unique Age Categories", 
+                             "Unique Sexual Orientation Categories",
+                             "SSCQ Ethnicity Categories"))
+
+# Add column with percentages within each characteristic
+scotland_data_with_other <- scotland_data_with_other %>%
+  group_by(Characteristic) %>%
+  mutate(Percent = round((Value/sum(Value)) * 100, 1)) %>%
+  # Add column with dataset label
+  mutate(Dataset = "Scotland - Council Employees") %>%
+  select(-Value) %>%
+  filter(Measure %in% c(
+    "Sex - Other (e.g. Prefer not to answer / not disclosed)", 
+    "Age - Other (e.g. Prefer not to answer / not disclosed)", 
+    "Disability - Other (e.g. Prefer not to answer / not disclosed)",
+    "Ethnicity - Other (e.g. Prefer not to answer / not disclosed)",
+    "Religion - Other (e.g. Prefer not to answer / not disclosed)", 
+    "Sexual Orientation - Other (e.g. prefer not to answer / not disclosed)", 
+    "Marital Status - Other (e.g. prefer not to answer / not disclosed)"
+  )
+  ) 
+
+kable(scotland_data_with_other)
+  
+```
+
 ``` {r aggregate Scotland data, echo = FALSE, warning = FALSE}
 # Add councils values together for each measure
-scotland_data <- council_data %>%
+scotland_data <- council_data_no_other %>%
   group_by(Characteristic, Measure) %>%
   summarise(Value = sum(Value, na.rm = TRUE)) %>%
   ungroup() %>%
@@ -126,6 +169,16 @@ scotland_data <- scotland_data %>%
 ```{r comparative dataset, echo = FALSE, warning = FALSE}
 # Format sscq data
 scotland_sscq <- sscq_data %>%
+  filter(!Measure %in% c(
+    "Sex - Other (e.g. Prefer not to answer / not disclosed)", 
+    "Age - Other (e.g. Prefer not to answer / not disclosed)", 
+    "Disability - Other (e.g. Prefer not to answer / not disclosed)",
+    "Ethnicity - Other (e.g. Prefer not to answer / not disclosed)",
+    "Religion - Other (e.g. Prefer not to answer / not disclosed)", 
+    "Sexual Orientation - Other (e.g. prefer not to answer / not disclosed)", 
+    "Marital Status - Other (e.g. prefer not to answer / not disclosed)"
+  )
+  ) %>%
   filter(Council == "Scotland") %>%
   rename(Percent = Percentage) %>%
   select(Characteristic, Measure, Percent, Dataset)
@@ -193,8 +246,7 @@ sex_scotland_graph <- create_scotland_graphs(
   graph_characteristic = "Sex",
   factor_levels = c(
     "Female",
-    "Male", 
-    "Sex - Other (e.g. Prefer not to answer / not disclosed)"
+    "Male"
     )
   )
 sex_scotland_graph
@@ -210,8 +262,7 @@ age_scotland_graph <- create_scotland_graphs(
     "45-54",
     "55-64",
     "65-74",
-    "75+",
-    "Age - Other (e.g. Prefer not to answer / not disclosed)"
+    "75+"
     )
   )
 age_scotland_graph
@@ -222,8 +273,7 @@ disability_scotland_graph <- create_scotland_graphs(
   graph_characteristic = "Disability", 
   factor_levels = c(
     "Disability", 
-    "No Disability", 
-    "Disability - Other (e.g. Prefer not to answer / not disclosed)"
+    "No Disability"
     )
   )
 disability_scotland_graph
@@ -235,8 +285,7 @@ ethnicity_scotland_graph <- create_scotland_graphs(
   graph_characteristic = "Ethnicity", 
   factor_levels = c(
     "White", 
-    "Minority Ethnicities", 
-    "Ethnicity - Other (e.g. Prefer not to answer / not disclosed)"
+    "Minority Ethnicities"
     )
   )
 ethnicity_scotland_graph
@@ -250,8 +299,7 @@ religion_scotland_graph <- create_scotland_graphs(
     "Church of Scotland",  
     "Roman Catholic",
     "Other Christian", 
-    "Muslim", 
-    "Religion - Other (e.g. Prefer not to answer / not disclosed)"
+    "Muslim"
     )
   )
 religion_scotland_graph
@@ -262,8 +310,7 @@ sexual_orientation_scotland_graph <- create_scotland_graphs(
   graph_characteristic = "Sexual Orientation",
   factor_levels = c(
     "Heterosexual", 
-    "Lesbian, Gay or Bisexual", 
-    "Sexual Orientation - Other (e.g. prefer not to answer / not disclosed)"
+    "Lesbian, Gay or Bisexual"
     )
   )
 
@@ -278,15 +325,14 @@ marital_status_scotland_graph <- create_scotland_graphs(
     "Single", 
     "Divorced / Dissolved civil partnership", 
     "Seperated", 
-    "Widowed / Bereaved civil partner", 
-    "Marital Status - Other (e.g. prefer not to answer / not disclosed)"
+    "Widowed / Bereaved civil partner"
     )
   )
 marital_status_scotland_graph
 ```
 
 ``` {r workforce and population data, echo = FALSE}
-council_data_formatted <- council_data %>%
+council_data_formatted <- council_data_no_other %>%
   select(-`Period Covered`, -Date, -Value) %>%
   rename(`Council Workforce` = Percent)
 
@@ -294,7 +340,7 @@ sscq_data_formatted <- sscq_data %>%
   select(-Dataset, -`Period Covered`, -Date) %>%
   rename(`Council Population` = Percentage)
 
-workforce_pop_data <- merge(council_data_formatted, sscq_data_formatted)
+workforce_pop_data <- merge(council_data_formatted, sscq_data_formatted) 
 
 ```
 
@@ -345,7 +391,7 @@ print(ggplot(data = gender_range_data,
 ```
 
 ```{r gender pay gap, echo = FALSE}
-gender_data <- council_data %>%
+gender_data <- council_data_no_other %>%
   filter(Characteristic == "Sex" & Measure == "Female") %>%
   pivot_wider(., names_from = Measure, values_from = Percent) %>%
   select(Council, Female)
