@@ -331,6 +331,19 @@ gender_range_summary <- rbind(pop_min, pop_max) %>%
 kable(gender_range_summary)
 ```
 
+```{r gender range plot, echo = FALSE}
+gender_range_data <- gender_diff_data %>%
+  pivot_longer(., 4:5, names_to = "Dataset", values_to = "Value") %>%
+  group_by(Dataset) %>% 
+  summarise(lower = min(Value), upper = max(Value), p = median(Value))
+
+print(ggplot(data = gender_range_data, 
+             aes(x = Dataset, y = p)
+             ) +
+        geom_pointrange(mapping = aes(ymin = lower, ymax = upper))
+      )
+```
+
 ```{r gender pay gap, echo = FALSE}
 gender_data <- council_data %>%
   filter(Characteristic == "Sex" & Measure == "Female") %>%
@@ -360,6 +373,18 @@ print(ggplot(pay_gap_data, aes(x = Female, y = `Gender Pay Gap`)) +
       )
 ```
 
+```{r most common age, echo = FALSE}
+common_age <- council_data_formatted %>%
+  filter(Characteristic == "SSCQ Age Categories") %>%
+  group_by(Council) %>%
+  filter(`Council Workforce` == max(`Council Workforce`, 
+                                    na.rm = TRUE
+                                    )
+         ) %>%
+  ungroup() %>%
+ # group_by(Measure)
+  count(Measure)
+```
 ```{r age diff, echo = FALSE}
 # Group together 3 youngest age groups and 3 oldest
 # exclude 75+ as there is such a small prop in that group
