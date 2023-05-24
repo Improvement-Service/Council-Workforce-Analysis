@@ -383,10 +383,16 @@ gender_range_data <- gender_diff_data %>%
   group_by(Dataset) %>% 
   summarise(lower = min(Value), upper = max(Value), p = median(Value))
 
-print(ggplot(data = gender_range_data, 
-             aes(x = Dataset, y = p)
-             ) +
-        geom_pointrange(mapping = aes(ymin = lower, ymax = upper))
+print(ggplot(data = gender_range_data, aes(x = Dataset, y = p)) +
+        geom_pointrange(mapping = aes(ymin = lower, ymax = upper),
+                        color = "steelblue3"
+                        ) +
+        theme_minimal() +
+        ggtitle("Female proportion range across councils") +
+        # Remove axis labels
+        theme(axis.title.x = element_blank(), 
+        axis.title.y = element_blank()
+        )
       )
 ```
 
